@@ -80,20 +80,32 @@ GameLoop
 ;------------------------------------------------------------          
 !zone scrollScreen
 scrollScreen
+		ldx	SCROLL_DELAY
+		cpx	#$05
+		beq	.doScroll
+		
+		inx
+		stx	SCROLL_DELAY
+		rts
+		
+.doScroll
+		ldx	#$00
+		stx	SCROLL_DELAY
+		
           ; copy the first column to backup table
           ldy  #$00
+		
+          ; take address of backup column
+          lda  #<BACKUP_COLUMN
+          sta  ZEROPAGE_POINTER_2
+          lda  #>BACKUP_COLUMN
+          sta  ZEROPAGE_POINTER_2+1		
 .loop
           ; take address of first character on line y
           lda  SCREEN_LINE_OFFSET_TABLE_LO,y
           sta  ZEROPAGE_POINTER_1
           lda  SCREEN_LINE_OFFSET_TABLE_HI,y
           sta  ZEROPAGE_POINTER_1+1
-
-          ; take address of backup column
-          lda  #<BACKUP_COLUMN
-          sta  ZEROPAGE_POINTER_2
-          lda  #>BACKUP_COLUMN
-          sta  ZEROPAGE_POINTER_2+1
 
           ; take 1st character on line y and store in table at position y
           sty  PARAM1
@@ -200,8 +212,15 @@ waitFrame
           
           rts
 
+;---------------------------------------
+;
+;	Game data goes here
+;
+;---------------------------------------
 
 BACKUP_COLUMN  !fill     25     
+
+SCROLL_DELAY	!byte	0
          
 SCREEN_LINE_OFFSET_TABLE_LO
           !byte ( SCREEN_CHAR +   0 ) & 0x00ff
