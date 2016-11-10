@@ -16,6 +16,7 @@ ZEROPAGE_POINTER_2      = $19
 ZEROPAGE_POINTER_3      = $21
 ZEROPAGE_POINTER_4      = $23
 
+VIC_SCREENCTRL2          = $d016
 VIC_BORDER_COLOR        = $d020
 VIC_BACKGROUND_COLOR    = $d021
 
@@ -54,6 +55,22 @@ SCREEN_BACK_COLOR       = $C800
           sta VIC_BACKGROUND_COLOR
           sta VIC_BORDER_COLOR
 
+          ; set 38 column mode
+          lda VIC_SCREENCTRL2
+          and #%11110111
+          sta VIC_SCREENCTRL2
+
+          ; start at 7 for left scrolling
+          lda  #$07
+          sta  SCROLL_POS
+
+          ; set scroll position to 7
+          lda VIC_SCREENCTRL2
+          and #$F8
+          clc 
+          adc SCROLL_POS
+          sta VIC_SCREENCTRL2          
+
 ;------------------------------------------------------------
 ;
 ;    GameLoop
@@ -66,31 +83,62 @@ GameLoop
           ;lda #1
           ;sta VIC_BORDER_COLOR
 
-          jsr scrollScreen
+          jsr  softScrollLeft
+          ;jsr hardScrollScreen
 
           ;lda #0
           ;sta VIC_BORDER_COLOR
 
           jmp GameLoop         
-     
+    
 ;------------------------------------------------------------
 ;
-;    scrollScreen
+;    softScrollLeft
 ;
 ;------------------------------------------------------------          
-!zone scrollScreen
-scrollScreen
-		ldx	SCROLL_DELAY
-		cpx	#$05
-		beq	.doScroll
-		
-		inx
-		stx	SCROLL_DELAY
-		rts
+!zone softScrollLeft
+softScrollLeft
+
+          ldx  SCROLL_DELAY
+          cpx  #$05
+          beq  .doScroll
+          
+          inc  SCROLL_DELAY
+          rts
+
+.doScroll
+          ldx  #$00
+          stx  SCROLL_DELAY
+
+          dec  SCROLL_POS
+          ldx  SCROLL_POS
+          bpl  .setScrollRegister
+
+.resetPosition
+          jsr  hardScrollScreen
+          lda  #$07
+          sta  SCROLL_POS
+
+.setScrollRegister
+          lda VIC_SCREENCTRL2
+          and #$F8
+          clc 
+          adc SCROLL_POS
+          sta VIC_SCREENCTRL2
+          rts
+
+;------------------------------------------------------------
+;
+;    hardScrollScreen
+;
+;------------------------------------------------------------          
+!zone hardScrollScreen
+hardScrollScreen
+
+
 		
 .doScroll
-		ldx	#$00
-		stx	SCROLL_DELAY
+
 		
           ; copy the first column to backup table
           ldy  #$00
@@ -116,7 +164,7 @@ scrollScreen
 
           ; do this for lines 0-24
           iny
-          cpy  #25
+          cpy  #24
           bne  .loop
 
           ; now we shift all columns on each row left by one character
@@ -153,7 +201,7 @@ scrollScreen
           iny
 
           ; stop after 25 rows
-          cpy  #25
+          cpy  #24
           bne  .nextRow
 
 .rowsDone
@@ -183,7 +231,7 @@ scrollScreen
 
           ; do this for lines 0-24
           iny
-          cpy  #25
+          cpy  #24
           bne  .loopLastColumn
 
           rts
@@ -221,6 +269,8 @@ waitFrame
 BACKUP_COLUMN  !fill     25     
 
 SCROLL_DELAY	!byte	0
+
+SCROLL_POS     !byte     0
          
 SCREEN_LINE_OFFSET_TABLE_LO
           !byte ( SCREEN_CHAR +   0 ) & 0x00ff
