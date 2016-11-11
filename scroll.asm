@@ -28,7 +28,7 @@ SCREEN_CHAR             = $0400
 ;address of color ram
 SCREEN_COLOR            = $D800
 
-;address of the screen backbuffer
+;address of the screen backup memory (also basic code ;)
 SCREEN_BACK_CHAR        = $0800
 
 ;address of the screen backbuffer
@@ -134,11 +134,6 @@ softScrollLeft
 ;------------------------------------------------------------          
 !zone hardScrollScreen
 hardScrollScreen
-
-
-		
-.doScroll
-
 		
           ; copy the first column to backup table
           ldy  #$00
@@ -258,6 +253,78 @@ waitFrame
           cmp #$F8
           bne .WaitStep2
           
+          rts
+
+;---------------------------------------
+;
+;    copyScreenToBackup
+;    ZEROPAGE_POINTER_1 = from
+;    ZEROPAGE_POINTER_2 = to
+;
+;---------------------------------------
+!zone copyScreenToBackup
+CopyScreenToBackup
+          ldy  #$00
+.loop
+          lda  SCREEN_CHAR,y
+          sta  SCREEN_BACK_CHAR,y
+          lda  SCREEN_CHAR+250,y
+          sta  SCREEN_BACK_CHAR+250,y
+          lda  SCREEN_CHAR+500,y
+          sta  SCREEN_BACK_CHAR+500,y
+          lda  SCREEN_CHAR+750,y
+          sta  SCREEN_BACK_CHAR+750,y
+          iny
+          cpy  #250
+          bne  .loop
+
+          rts
+
+;---------------------------------------
+;    copyBackupToBase
+;---------------------------------------
+!zone copyBackupToBase
+CopyScreenToBase
+          ldy  #$00
+.loop
+          lda  SCREEN_BACK_CHAR,y
+          sta  SCREEN_CHAR,y
+          lda  SCREEN_BACK_CHAR+250,y
+          sta  SCREEN_CHAR+250,y
+          lda  SCREEN_BACK_CHAR+500,y
+          sta  SCREEN_CHAR+500,y
+          lda  SCREEN_BACK_CHAR+750,y
+          sta  SCREEN_CHAR+750,y
+          iny
+          cpy  #250
+          bne  .loop
+
+          rts
+
+;---------------------------------------
+;
+;    SetVideoRamToBase
+;
+;---------------------------------------
+!zone SetVideoRamToBase
+SetVideoRamToBase
+          lda $d018                                    ; top 4 bits of d018 holds the screen location in RAM
+          and #$0f                                     ; mask upper 4 bits
+          ora #$10                                     ; set upper 4 bits to '1'
+          sta $d018
+          rts
+
+;---------------------------------------
+;
+;    SetVideoRamToBackup
+;
+;---------------------------------------
+!zone SetVideoRamToBackup
+SetVideoRamToBackup
+          lda $d018                                    ; top 4 bits of d018 holds the screen location in RAM
+          and #$0f                                     ; mask upper 4 bits
+          ora #$20                                     ; set upper 4 bits to '1'
+          sta $d018
           rts
 
 ;---------------------------------------
