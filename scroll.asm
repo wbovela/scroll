@@ -28,8 +28,8 @@ SCREEN_CHAR             = $0400
 ;address of color ram
 SCREEN_COLOR            = $D800
 
-;address of the screen backup memory (also basic code ;)
-SCREEN_BACK_CHAR        = $0800
+;address of the screen backup memory
+SCREEN_BACK_CHAR        = $2000
 
 ;address of the screen backbuffer
 SCREEN_BACK_COLOR       = $C800
@@ -69,7 +69,10 @@ SCREEN_BACK_COLOR       = $C800
           and #$F8
           clc 
           adc SCROLL_POS
-          sta VIC_SCREENCTRL2          
+          sta VIC_SCREENCTRL2    
+
+          jsr  copyBaseToBackup
+          jsr  SetVideoRamToBackup
 
 ;------------------------------------------------------------
 ;
@@ -257,13 +260,11 @@ waitFrame
 
 ;---------------------------------------
 ;
-;    copyScreenToBackup
-;    ZEROPAGE_POINTER_1 = from
-;    ZEROPAGE_POINTER_2 = to
+;    copyBaseToBackup
 ;
 ;---------------------------------------
-!zone copyScreenToBackup
-CopyScreenToBackup
+!zone copyBaseToBackup
+copyBaseToBackup
           ldy  #$00
 .loop
           lda  SCREEN_CHAR,y
@@ -284,7 +285,7 @@ CopyScreenToBackup
 ;    copyBackupToBase
 ;---------------------------------------
 !zone copyBackupToBase
-CopyScreenToBase
+copyBackupToBase
           ldy  #$00
 .loop
           lda  SCREEN_BACK_CHAR,y
@@ -304,26 +305,26 @@ CopyScreenToBase
 ;---------------------------------------
 ;
 ;    SetVideoRamToBase
-;
+;    $0400
 ;---------------------------------------
 !zone SetVideoRamToBase
 SetVideoRamToBase
-          lda $d018                                    ; top 4 bits of d018 holds the screen location in RAM
-          and #$0f                                     ; mask upper 4 bits
-          ora #$10                                     ; set upper 4 bits to '1'
+          lda $d018
+          and #$0f
+          ora #$10
           sta $d018
           rts
 
 ;---------------------------------------
 ;
 ;    SetVideoRamToBackup
-;
+;    $1000
 ;---------------------------------------
 !zone SetVideoRamToBackup
 SetVideoRamToBackup
-          lda $d018                                    ; top 4 bits of d018 holds the screen location in RAM
-          and #$0f                                     ; mask upper 4 bits
-          ora #$20                                     ; set upper 4 bits to '1'
+          lda $d018
+          and #$0f
+          ora #$80
           sta $d018
           rts
 
@@ -392,7 +393,34 @@ SCREEN_LINE_OFFSET_TABLE_HI
           !byte ( ( SCREEN_CHAR + 880 ) & 0xff00 ) >> 8
           !byte ( ( SCREEN_CHAR + 920 ) & 0xff00 ) >> 8
           !byte ( ( SCREEN_CHAR + 960 ) & 0xff00 ) >> 8
-          
+ 
+SCREEN_BACK_LINE_OFFSET_TABLE_LO
+          !byte ( SCREEN_BACK_CHAR +   0 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR +  40 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR +  80 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 120 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 160 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 200 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 240 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 280 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 320 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 360 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 400 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 440 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 480 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 520 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 560 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 600 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 640 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 680 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 720 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 760 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 800 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 840 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 880 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 920 ) & 0x00ff
+          !byte ( SCREEN_BACK_CHAR + 960 ) & 0x00ff
+
 SCREEN_BACK_LINE_OFFSET_TABLE_HI
           !byte ( ( SCREEN_BACK_CHAR +   0 ) & 0xff00 ) >> 8
           !byte ( ( SCREEN_BACK_CHAR +  40 ) & 0xff00 ) >> 8
@@ -419,4 +447,5 @@ SCREEN_BACK_LINE_OFFSET_TABLE_HI
           !byte ( ( SCREEN_BACK_CHAR + 880 ) & 0xff00 ) >> 8
           !byte ( ( SCREEN_BACK_CHAR + 920 ) & 0xff00 ) >> 8
           !byte ( ( SCREEN_BACK_CHAR + 960 ) & 0xff00 ) >> 8
+
 
