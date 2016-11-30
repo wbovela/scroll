@@ -122,26 +122,33 @@ softScrollLeft
           bpl  .setScrollRegister
 
 .resetPosition
+          ; set zeropage pointer 3 to base screen line offset low table
           lda  #<SCREEN_LINE_OFFSET_TABLE_LO
           sta  ZEROPAGE_POINTER_3
           lda  #>SCREEN_LINE_OFFSET_TABLE_LO
           sta  ZEROPAGE_POINTER_3+1
 
+          ; set zeropage pointer 4 to base screen line offset high table
           lda  #<SCREEN_LINE_OFFSET_TABLE_HI
           sta  ZEROPAGE_POINTER_4
           lda  #>SCREEN_LINE_OFFSET_TABLE_HI
           sta  ZEROPAGE_POINTER_4+1
 
+          ; now call the hard scroll routine 
           jsr  hardScrollScreen
+
+          ; reset the scroll position to 7
           lda  #$07
           sta  SCROLL_POS
 
 .setScrollRegister
+          ; load the current value, clear bits #0-#2, add scroll position and write back
           lda VIC_SCREENCTRL2
           and #$F8
           clc 
           adc SCROLL_POS
           sta VIC_SCREENCTRL2
+
           rts
 
 ;------------------------------------------------------------
