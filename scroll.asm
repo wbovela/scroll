@@ -48,6 +48,7 @@ SCREEN_BACK_COLOR       = $C800
           sta  SCREEN_COLOR+500,y
           sta  SCREEN_COLOR+750,y
           iny
+		cpy	#250
           bne  .loopWhite
 
           ;background black
