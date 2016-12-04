@@ -70,10 +70,14 @@ SCREEN_BACK_COLOR       = $C800
           and #$F8
           clc 
           adc SCROLL_POS
-          sta VIC_SCREENCTRL2    
+          sta VIC_SCREENCTRL2   
 
+          ; set base screen
+          lda  #$00
+          sta  ACTIVE_SCREEN 
+
+          ; start off by making a copy of the current screen to the backup
           jsr  copyBaseToBackup
-          jsr  SetVideoRamToBackup
 
 ;------------------------------------------------------------
 ;
@@ -119,22 +123,40 @@ softScrollLeft
           bpl  .setScrollRegister
 
 .resetPosition
+          ; set zeropage pointer 3 to base screen line offset low table
+          lda  #<SCREEN_LINE_OFFSET_TABLE_LO
+          sta  ZEROPAGE_POINTER_3
+          lda  #>SCREEN_LINE_OFFSET_TABLE_LO
+          sta  ZEROPAGE_POINTER_3+1
+
+          ; set zeropage pointer 4 to base screen line offset high table
+          lda  #<SCREEN_LINE_OFFSET_TABLE_HI
+          sta  ZEROPAGE_POINTER_4
+          lda  #>SCREEN_LINE_OFFSET_TABLE_HI
+          sta  ZEROPAGE_POINTER_4+1
+
+          ; now call the hard scroll routine 
           jsr  hardScrollScreen
+
+          ; reset the scroll position to 7
           lda  #$07
           sta  SCROLL_POS
 
 .setScrollRegister
+          ; load the current value, clear bits #0-#2, add scroll position and write back
           lda VIC_SCREENCTRL2
           and #$F8
           clc 
           adc SCROLL_POS
           sta VIC_SCREENCTRL2
+
           rts
 
 ;------------------------------------------------------------
 ;
 ;    hardScrollScreen
-;
+;    ZEROPAGE_POINTER_3 = address of line offset table low 
+;    ZEROPAGE_POINTER_4 = address of line offset table high
 ;------------------------------------------------------------          
 !zone hardScrollScreen
 hardScrollScreen
@@ -149,9 +171,9 @@ hardScrollScreen
           sta  ZEROPAGE_POINTER_2+1		
 .loop
           ; take address of first character on line y
-          lda  SCREEN_LINE_OFFSET_TABLE_LO,y
+          lda  (ZEROPAGE_POINTER_3),y
           sta  ZEROPAGE_POINTER_1
-          lda  SCREEN_LINE_OFFSET_TABLE_HI,y
+          lda  (ZEROPAGE_POINTER_4),y
           sta  ZEROPAGE_POINTER_1+1
 
           ; take 1st character on line y and store in table at position y
@@ -171,9 +193,9 @@ hardScrollScreen
 
 .nextRow
           ; take address of first character on line y
-          lda  SCREEN_LINE_OFFSET_TABLE_LO,y
+          lda  (ZEROPAGE_POINTER_3),y
           sta  ZEROPAGE_POINTER_1
-          lda  SCREEN_LINE_OFFSET_TABLE_HI,y
+          lda  (ZEROPAGE_POINTER_4),y
           sta  ZEROPAGE_POINTER_1+1          
 
           sty  PARAM1
@@ -209,9 +231,9 @@ hardScrollScreen
           ldy  #$00
 .loopLastColumn
           ; take address of first character on line y
-          lda  SCREEN_LINE_OFFSET_TABLE_LO,y
+          lda  (ZEROPAGE_POINTER_3),y
           sta  ZEROPAGE_POINTER_1
-          lda  SCREEN_LINE_OFFSET_TABLE_HI,y
+          lda  (ZEROPAGE_POINTER_4),y
           sta  ZEROPAGE_POINTER_1+1
 
           ; take address of backup column
@@ -335,12 +357,19 @@ SetVideoRamToBackup
 ;
 ;---------------------------------------
 
+; are for keeping one column of screen information
 BACKUP_COLUMN  !fill     25     
 
+; the delay counter for scrolling
 SCROLL_DELAY	!byte	0
 
+; the current horizontal sroll position
 SCROLL_POS     !byte     0
+
+; indicated active screen 0=base, 1=backup
+ACTIVE_SCREEN  !byte     0
          
+; tables of address of first character on each line of base and backup screens (low and high parts)
 SCREEN_LINE_OFFSET_TABLE_LO
           !byte ( SCREEN_CHAR +   0 ) & 0x00ff
           !byte ( SCREEN_CHAR +  40 ) & 0x00ff
