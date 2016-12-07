@@ -16,7 +16,7 @@ ZEROPAGE_POINTER_2      = $19
 ZEROPAGE_POINTER_3      = $21
 ZEROPAGE_POINTER_4      = $23
 
-VIC_SCREENCTRL2          = $d016
+VIC_SCREENCTRL2         = $d016
 VIC_BORDER_COLOR        = $d020
 VIC_BACKGROUND_COLOR    = $d021
 
@@ -33,6 +33,10 @@ SCREEN_BACK_CHAR        = $2000
 
 ;address of the screen backbuffer
 SCREEN_BACK_COLOR       = $C800
+
+;values for base and backup screen
+BASE_SCREEN             = $00
+BACKUP_SCREEN           = $FF
 
 ;this creates a basic start
 *=$0801
@@ -73,19 +77,32 @@ SCREEN_BACK_COLOR       = $C800
           adc SCROLL_POS
           sta VIC_SCREENCTRL2   
 
-          ; set base screen
-          lda  #$00
+          ; set base screen as active screen
+          lda  #BASE_SCREEN
           sta  ACTIVE_SCREEN 
 
           ; start off by making a copy of the current screen to the backup
           jsr  copyBaseToBackup
+
+          ; ZP3 and ZP4 are used for hard scrolling the screen.
+          ; set zeropage pointer 3 to backup screen line offset low table
+          lda  #<SCREEN_BACK_LINE_OFFSET_TABLE_LO
+          sta  ZEROPAGE_POINTER_3
+          lda  #>SCREEN_BACK_LINE_OFFSET_TABLE_LO
+          sta  ZEROPAGE_POINTER_3+1
+
+          ; set zeropage pointer 4 to backup screen line offset high table
+          lda  #<SCREEN_BACK_LINE_OFFSET_TABLE_HI
+          sta  ZEROPAGE_POINTER_4
+          lda  #>SCREEN_BACK_LINE_OFFSET_TABLE_HI
+          sta  ZEROPAGE_POINTER_4+1          
 
 ;------------------------------------------------------------
 ;
 ;    GameLoop
 ;
 ;------------------------------------------------------------
-
+!zone GameLoop
 GameLoop  
           jsr waitFrame
 
@@ -93,12 +110,11 @@ GameLoop
           ;sta VIC_BORDER_COLOR
 
           jsr  softScrollLeft
-          ;jsr hardScrollScreen
 
           ;lda #0
           ;sta VIC_BORDER_COLOR
 
-          jmp GameLoop         
+          jmp  GameLoop         
     
 ;------------------------------------------------------------
 ;
@@ -119,33 +135,43 @@ softScrollLeft
           ldx  #$00
           stx  SCROLL_DELAY
 
-          dec  SCROLL_POS
           ldx  SCROLL_POS
-          bpl  .setScrollRegister
-
-.resetPosition
-          ; set zeropage pointer 3 to base screen line offset low table
-          lda  #<SCREEN_LINE_OFFSET_TABLE_LO
-          sta  ZEROPAGE_POINTER_3
-          lda  #>SCREEN_LINE_OFFSET_TABLE_LO
-          sta  ZEROPAGE_POINTER_3+1
-
-          ; set zeropage pointer 4 to base screen line offset high table
-          lda  #<SCREEN_LINE_OFFSET_TABLE_HI
-          sta  ZEROPAGE_POINTER_4
-          lda  #>SCREEN_LINE_OFFSET_TABLE_HI
-          sta  ZEROPAGE_POINTER_4+1
+          cpx  #$02
+          bne  .notattwo
 
           ; set start row
           lda  #0
           sta  PARAM2
           ; set end row
-          lda  #24
+          lda  #12
           sta  PARAM3
+
+          ; now call the hard scroll routine 
+          jsr  hardScrollScreen          
+
+          jmp  .notatfour          
+
+.notattwo
+          cpx  #$04
+          bne  .notatfour
+
+          ; set start row
+          lda  #13
+          sta  PARAM2
+          ; set end row
+          lda  #24
+          sta  PARAM3       
 
           ; now call the hard scroll routine 
           jsr  hardScrollScreen
 
+.notatfour
+          ; scroll left one pixel until SCROLL_POS = $FF
+          dec  SCROLL_POS
+          ldx  SCROLL_POS
+          bpl  .setScrollRegister
+
+.resetPosition
           ; reset the scroll position to 7
           lda  #$07
           sta  SCROLL_POS
@@ -158,6 +184,50 @@ softScrollLeft
           adc SCROLL_POS
           sta VIC_SCREENCTRL2
 
+          lda  ACTIVE_SCREEN
+          beq  .switch_to_backup
+
+.switch_to_base
+          ; set base screen as active
+          lda  #BASE_SCREEN
+          sta  ACTIVE_SCREEN
+
+          jsr  copyBaseToBackup
+
+          ; set zeropage pointer 3 to backup screen line offset low table
+          lda  #<SCREEN_BACK_LINE_OFFSET_TABLE_LO
+          sta  ZEROPAGE_POINTER_3
+          lda  #>SCREEN_BACK_LINE_OFFSET_TABLE_LO
+          sta  ZEROPAGE_POINTER_3+1
+
+          ; set zeropage pointer 4 to backup screen line offset high table
+          lda  #<SCREEN_BACK_LINE_OFFSET_TABLE_HI
+          sta  ZEROPAGE_POINTER_4
+          lda  #>SCREEN_BACK_LINE_OFFSET_TABLE_HI
+          sta  ZEROPAGE_POINTER_4+1          
+
+          jmp  .exit
+
+.switch_to_backup
+          ; set backup screen as active
+          lda  #BACKUP_SCREEN
+          sta  ACTIVE_SCREEN
+
+          jsr  copyBackupToBase
+
+          ; set zeropage pointer 3 to base screen line offset low table
+          lda  #<SCREEN_LINE_OFFSET_TABLE_LO
+          sta  ZEROPAGE_POINTER_3
+          lda  #>SCREEN_LINE_OFFSET_TABLE_LO
+          sta  ZEROPAGE_POINTER_3+1
+
+          ; set zeropage pointer 4 to base screen line offset high table
+          lda  #<SCREEN_LINE_OFFSET_TABLE_HI
+          sta  ZEROPAGE_POINTER_4
+          lda  #>SCREEN_LINE_OFFSET_TABLE_HI
+          sta  ZEROPAGE_POINTER_4+1          
+
+.exit
           rts
 
 ;------------------------------------------------------------
@@ -352,7 +422,7 @@ SetVideoRamToBase
 ;---------------------------------------
 ;
 ;    SetVideoRamToBackup
-;    $1000
+;    $2000
 ;---------------------------------------
 !zone SetVideoRamToBackup
 SetVideoRamToBackup
