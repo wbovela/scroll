@@ -40,6 +40,7 @@ SCREEN_BACK_COLOR       = $C800
           ;SYS 2064
           !byte $0C,$08,$0A,$00,$9E,$20,$32,$30,$36,$34,$00,$00,$00,$00,$00
 
+          ; make the character colour white
           ldy  #$00
           lda  #$01
 .loopWhite
@@ -135,6 +136,13 @@ softScrollLeft
           lda  #>SCREEN_LINE_OFFSET_TABLE_HI
           sta  ZEROPAGE_POINTER_4+1
 
+          ; set start row
+          lda  #0
+          sta  PARAM2
+          ; set end row
+          lda  #24
+          sta  PARAM3
+
           ; now call the hard scroll routine 
           jsr  hardScrollScreen
 
@@ -157,6 +165,8 @@ softScrollLeft
 ;    hardScrollScreen
 ;    ZEROPAGE_POINTER_3 = address of line offset table low 
 ;    ZEROPAGE_POINTER_4 = address of line offset table high
+;    PARAM2 = start row
+;    PARAM3 = stop row
 ;------------------------------------------------------------          
 !zone hardScrollScreen
 hardScrollScreen
@@ -178,18 +188,19 @@ hardScrollScreen
 
           ; take 1st character on line y and store in table at position y
           sty  PARAM1
-          ldy  #$00
+          
+          ldy  PARAM2
           lda  (ZEROPAGE_POINTER_1),y
           ldy  PARAM1
           sta  (ZEROPAGE_POINTER_2),y
 
-          ; do this for lines 0-24
+          ; do this for lines PARAM2 to PARAM3
           iny
-          cpy  #24
+          cpy  PARAM3
           bne  .loop
 
           ; now we shift all columns on each row left by one character
-          ldy  #$00
+          ldy  PARAM2
 
 .nextRow
           ; take address of first character on line y
@@ -221,14 +232,14 @@ hardScrollScreen
           ldy  PARAM1
           iny
 
-          ; stop after 25 rows
-          cpy  #24
+          ; stop after PARAM3 rows
+          cpy  PARAM3
           bne  .nextRow
 
 .rowsDone
 
           ; copy the backup column to the last column
-          ldy  #$00
+          ldy  PARAM2
 .loopLastColumn
           ; take address of first character on line y
           lda  (ZEROPAGE_POINTER_3),y
@@ -250,9 +261,9 @@ hardScrollScreen
           sta  (ZEROPAGE_POINTER_1),y
           ldy  PARAM1
 
-          ; do this for lines 0-24
+          ; do this for lines PARAM2 to PARAM3
           iny
-          cpy  #24
+          cpy  PARAM3
           bne  .loopLastColumn
 
           rts
