@@ -184,10 +184,18 @@ softScrollLeft
 		lda  #$07
 		sta  SCROLL_POS
 
+		; test the current active screen 0=base, $FF=backup
 		lda  ACTIVE_SCREEN
 		beq  .switch_to_backup
 
 .switch_to_base
+		; load the current value, clear bits #0-#2, add scroll position and write back
+		lda VIC_SCREENCTRL2
+		and #$F8
+		clc 
+		adc SCROLL_POS
+		sta VIC_SCREENCTRL2
+
 		; the new visible area will be the base area
 		jsr  SetVideoRamToBase
 
@@ -210,9 +218,16 @@ softScrollLeft
 		lda  #>SCREEN_BACK_LINE_OFFSET_TABLE_HI
 		sta  ZEROPAGE_POINTER_4+1          
 
-		jmp  .setScrollRegister
+		jmp  .exit
 
 .switch_to_backup
+		; load the current value, clear bits #0-#2, add scroll position and write back
+		lda VIC_SCREENCTRL2
+		and #$F8
+		clc 
+		adc SCROLL_POS
+		sta VIC_SCREENCTRL2
+
 		; the new visible area will be the backup area
 		jsr  SetVideoRamToBackup
 
@@ -242,6 +257,7 @@ softScrollLeft
 		clc 
 		adc SCROLL_POS
 		sta VIC_SCREENCTRL2
+
 .exit
 		rts
 
@@ -251,7 +267,7 @@ softScrollLeft
 ;    ZEROPAGE_POINTER_3 = address of line offset table low 
 ;    ZEROPAGE_POINTER_4 = address of line offset table high
 ;    PARAM2 = start row
-;    PARAM3 = stop row
+;    PARAM3 = end row
 ;------------------------------------------------------------          
 !zone hardScrollScreen
 hardScrollScreen
@@ -462,7 +478,7 @@ SCROLL_DELAY	!byte	0
 ; the current horizontal sroll position
 SCROLL_POS     !byte     0
 
-; indicated active screen 0=base, 1=backup
+; indicated active screen $0=base, $ff=backup
 ACTIVE_SCREEN  !byte     0
 		 
 ; tables of address of first character on each line of base and backup screens (low and high parts)
