@@ -38,6 +38,9 @@ SCREEN_BACK_COLOR       = $C800
 BASE_SCREEN             = $00
 BACKUP_SCREEN           = $FF
 
+;set number of loops to delay scrolling
+SCROLL_DELAY_COUNT		= $01
+
 ;this creates a basic start
 *=$0801
 
@@ -128,19 +131,21 @@ GameLoop
 ;------------------------------------------------------------          
 !zone softScrollLeft
 softScrollLeft
-
+		;check whether to execute the scroll
 		ldx  SCROLL_DELAY
-		cpx  #$05
+		cpx  #SCROLL_DELAY_COUNT
 		beq  .doScroll
 		  
 		inc  SCROLL_DELAY
 		rts
 
 .doScroll
-
+		; let's scroll a pixel
+		; reset the scroll delay to zero
 		ldx	#$00
 		stx	SCROLL_DELAY
 
+		; are we at pixel 2 yet?
 		ldx  SCROLL_POS
 		cpx  #$02
 		bne  .notattwo
@@ -158,6 +163,7 @@ softScrollLeft
 		jmp  .notatfour          
 
 .notattwo
+		; check if we're at pixel 4
 		cpx  #$04
 		bne  .notatfour
 
