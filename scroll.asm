@@ -52,9 +52,13 @@ SCROLL_DELAY_COUNT		= $01
 		lda  #$01
 .loopWhite
 		sta  SCREEN_COLOR,y
+		sta	SCREEN_CHAR,y
 		sta  SCREEN_COLOR+250,y
+		sta	SCREEN_CHAR+250,y
 		sta  SCREEN_COLOR+500,y
+		sta	SCREEN_CHAR+500,y
 		sta  SCREEN_COLOR+750,y
+		sta	SCREEN_CHAR+750,y
 		iny
 		cpy	#250
 		bne  .loopWhite
