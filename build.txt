@@ -1,1 +1,0 @@
-sublime text editor has a build option for "acme" style assembly which calls the acme assembler. Output goes to current directory.
