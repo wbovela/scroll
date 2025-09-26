@@ -3,36 +3,36 @@
 
 ;macros
 !macro first_to_backup_column .rows {
-    !for .i = 0 to .rows-1 
+    !for .i, 0, .rows-1 { 
         lda SCREEN_CHAR + (.i * 40)
         sta BACKUP_COLUMN + .i
-    !end
+    }
 }
 
 
 !macro backup_to_last_column .rows {
-  !for .i = 0 to .rows-1 
+  !for .i, 0, .rows-1 {
     lda BACKUP_COLUMN + .i
     sta SCREEN_CHAR + (.i * 40) + 39
-  !end
+  }
 }
 
 !macro scroll_color_ram .startrow, .endrow {
-  !for .i = .startrow to .endrow-1 
-    !for .j = 0 to 39 
+  !for .i, .startrow, .endrow-1 {
+    !for .j, 0, 39 { 
       lda SCREEN_COLOR + (.i * 40) + (.j + 1)
       sta SCREEN_COLOR + (.i * 40) + .j
-    !end
-  !end
+    }
+  }
 }
 
 !macro scroll_char_ram .startrow, .endrow {
-  !for .i = .startrow to .endrow-1 
-    !for .j = 0 to 39 
+  !for .i, .startrow, .endrow-1 {
+    !for .j, 0, 39 {
       lda SCREEN_CHAR + (.i * 40) + (.j + 1)
       sta SCREEN_CHAR + (.i * 40) + .j
-    !end
-  !end
+    }
+  }
 }
 
 ;define constants here
