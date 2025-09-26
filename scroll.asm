@@ -2,38 +2,7 @@
 !to "jmain.prg",cbm
 
 ;macros
-!macro first_to_backup_column .startrow, .endrow {
-    !for .i, .startrow, .endrow-1 { 
-        lda SCREEN_CHAR + (.i * 40)
-        sta BACKUP_COLUMN + .i
-    }
-}
-
-
-!macro backup_to_last_column .startrow, .endrow {
-    !for .i, .startrow, .endrow-1 {
-    lda BACKUP_COLUMN + .i
-    sta SCREEN_CHAR + (.i * 40) + 39
-  }
-}
-
-!macro scroll_color_ram .startrow, .endrow {
-  !for .i, .startrow, .endrow-1 {
-    !for .j, 0, 39 { 
-      lda SCREEN_COLOR + (.i * 40) + (.j + 1)
-      sta SCREEN_COLOR + (.i * 40) + .j
-    }
-  }
-}
-
-!macro scroll_char_ram .startrow, .endrow {
-  !for .i, .startrow, .endrow-1 {
-    !for .j, 0, 39 {
-      lda SCREEN_CHAR + (.i * 40) + (.j + 1)
-      sta SCREEN_CHAR + (.i * 40) + .j
-    }
-  }
-}
+!source "macros.asm"
 
 ;define constants here
 
@@ -115,6 +84,13 @@ SCROLL_DELAY_COUNT    = $00
 GameLoop  
     jsr waitFrame
     
+    ; print scroll position
+    lda SCROLL_POS
+    clc
+    adc #48
+    sta $040a
+    
+    ; right pressed
     lda #$08
     bit JOYSTICK_PORT_II
     bne .noRight
@@ -123,11 +99,12 @@ GameLoop
 
 .noRight
 
+	; left pressed
     lda #$04
     bit JOYSTICK_PORT_II
     bne .noLeft
 
-    ;jsr softScrollRight
+    jsr softScrollRight
 
 .noLeft
 
@@ -143,7 +120,8 @@ GameLoop
 initDisplay
 	; clear screen
 	jsr $e544
-    ; set character colour 
+
+   ; set character colour 
     ldy  #$00
     lda  #$01
 .loopCharColour
@@ -194,7 +172,7 @@ softScrollLeft
     lda SCROLL_POS
     bne .notatzero
 
-    jsr hardScrollScreen
+    jsr hardScrollScreenLeft
 
 .notatzero
     ; scroll left one pixel until SCROLL_POS = $FF
@@ -218,19 +196,78 @@ softScrollLeft
 
 ;------------------------------------------------------------
 ;
-;    hardScrollScreen
+;    softScrollRight
+;
+;------------------------------------------------------------          
+!zone softScrollRight
+softScrollRight
+    ;check whether to execute the scroll
+    ldx  SCROLL_DELAY
+    cpx  #SCROLL_DELAY_COUNT
+    beq  .doScroll
+      
+    inc  SCROLL_DELAY
+    rts
+
+.doScroll
+    
+    ; reset the scroll delay to zero
+    ldx #$00
+    stx SCROLL_DELAY
+
+    lda SCROLL_POS
+    cmp #$07
+    bne .notatseven
+
+    jsr hardScrollScreenRight
+
+.notatseven
+    inc  SCROLL_POS
+    ldx  SCROLL_POS
+    cpx #$07
+    bne .setScrollRegister
+
+.resetPosition
+    ; Switch to scroll pos 0
+    lda  #$00
+    sta  SCROLL_POS
+
+.setScrollRegister
+    ; load the current value, clear bits #0-#2, add scroll position and write back
+    lda VIC_SCREENCTRL2
+    and #$F8
+    clc 
+    adc SCROLL_POS
+    sta VIC_SCREENCTRL2
+    rts
+
+;------------------------------------------------------------
+;
+;    hardScrollScreenLeft
 ;    PARAM2 = start row
 ;    PARAM3 = end row
 ;------------------------------------------------------------          
-!zone hardScrollScreen
-hardScrollScreen
-    +first_to_backup_column 5, 21  ; generates the 25 lda/sta pairs
-
-    ; now we shift all columns on each row left by one character
-    ;+scroll_char_ram 10, 20
-    +scroll_char_ram 5, 21
-
+!zone hardScrollScreenLeft
+hardScrollScreenLeft
+    +first_to_backup_column 5, 21
+    +scroll_char_ram_left 5, 21
     +backup_to_last_column 5, 21
+
+    ;+scroll_color_ram 5,21
+
+    rts
+
+;------------------------------------------------------------
+;
+;    hardScrollScreenRight
+;    PARAM2 = start row
+;    PARAM3 = end row
+;------------------------------------------------------------          
+!zone hardScrollScreenRight
+hardScrollScreenRight
+    +last_to_backup_column 5, 21
+    +scroll_char_ram_right 5, 21
+    +backup_to_first_column 5, 21
 
     ;+scroll_color_ram 5,21
 
