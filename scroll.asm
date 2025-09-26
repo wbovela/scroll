@@ -2,16 +2,16 @@
 !to "jmain.prg",cbm
 
 ;macros
-!macro first_to_backup_column .rows {
-    !for .i, 0, .rows-1 { 
+!macro first_to_backup_column .startrow, .endrow {
+    !for .i, .startrow, .endrow-1 { 
         lda SCREEN_CHAR + (.i * 40)
         sta BACKUP_COLUMN + .i
     }
 }
 
 
-!macro backup_to_last_column .rows {
-  !for .i, 0, .rows-1 {
+!macro backup_to_last_column .startrow, .endrow {
+    !for .i, .startrow, .endrow-1 {
     lda BACKUP_COLUMN + .i
     sta SCREEN_CHAR + (.i * 40) + 39
   }
@@ -71,7 +71,7 @@ SCREEN_CHAR             = $0400
 SCREEN_COLOR            = $D800
 
 ;set number of loops to delay scrolling
-SCROLL_DELAY_COUNT    = $02
+SCROLL_DELAY_COUNT    = $00
 
 ;this creates a basic start
 *=$0801
@@ -115,21 +115,21 @@ SCROLL_DELAY_COUNT    = $02
 GameLoop  
     jsr waitFrame
     
-    lda #$04
-    bit JOYSTICK_PORT_II
-    bne .noLeft
-
-    jsr  softScrollLeft
-
-.noLeft
-
     lda #$08
     bit JOYSTICK_PORT_II
     bne .noRight
 
-    ;jsr softScrollRight
+    jsr  softScrollLeft
 
 .noRight
+
+    lda #$04
+    bit JOYSTICK_PORT_II
+    bne .noLeft
+
+    ;jsr softScrollRight
+
+.noLeft
 
     jmp  GameLoop         
   
@@ -141,30 +141,32 @@ GameLoop
 
 !zone initDisplay
 initDisplay
+	; clear screen
+	jsr $e544
     ; set character colour 
     ldy  #$00
     lda  #$01
 .loopCharColour
-    sta  SCREEN_COLOR,y
-    sta  SCREEN_COLOR+250,y
-    sta  SCREEN_COLOR+500,y
-    sta  SCREEN_COLOR+750,y
+    sta  SCREEN_COLOR+200,y
+    sta  SCREEN_COLOR+360,y
+    sta  SCREEN_COLOR+520,y
+    sta  SCREEN_COLOR+680,y
     iny
-    tya       ; increase colour
-    cpy #250
+    ;tya       ; increase colour
+    cpy #160
     bne  .loopCharColour
 
     ; set characters to A
     ldy  #$00
     lda  #$01
 .loopChar
-    sta SCREEN_CHAR,y
-    sta SCREEN_CHAR+250,y
-    sta SCREEN_CHAR+500,y
-    sta SCREEN_CHAR+750,y
+    sta SCREEN_CHAR+200,y
+    sta SCREEN_CHAR+360,y
+    sta SCREEN_CHAR+520,y
+    sta SCREEN_CHAR+680,y
     iny
     tya       ; increase character
-    cpy #250
+    cpy #160
     bne  .loopChar
     rts
 
@@ -222,15 +224,15 @@ softScrollLeft
 ;------------------------------------------------------------          
 !zone hardScrollScreen
 hardScrollScreen
-    +first_to_backup_column 10   ; generates the 25 lda/sta pairs
+    +first_to_backup_column 5, 21  ; generates the 25 lda/sta pairs
 
     ; now we shift all columns on each row left by one character
     ;+scroll_char_ram 10, 20
-    +scroll_char_ram 0, 10
+    +scroll_char_ram 5, 21
 
-    +backup_to_last_column 10 
+    +backup_to_last_column 5, 21
 
-    +scroll_color_ram 0,10
+    ;+scroll_color_ram 5,21
 
     rts
 
