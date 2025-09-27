@@ -38,7 +38,7 @@
 
 !macro scroll_char_ram_left .startrow, .endrow {
   !for .i, .startrow, .endrow-1 {
-    !for .j, 0, 39 {
+    !for .j, 0, 38 {
       lda SCREEN_CHAR + (.i * 40) + (.j + 1)
       sta SCREEN_CHAR + (.i * 40) + .j
     }
@@ -47,7 +47,7 @@
 
 !macro scroll_char_ram_right .startrow, .endrow {
   !for .i, .startrow, .endrow-1 {
-    !for .j, 0, 39 {
+    !for .j, 38, 0 {
       lda SCREEN_CHAR + (.i * 40) + .j
       sta SCREEN_CHAR + (.i * 40) + (.j + 1)
     }

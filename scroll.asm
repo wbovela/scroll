@@ -217,15 +217,15 @@ softScrollRight
 
     lda SCROLL_POS
     cmp #$07
-    bne .notatseven
+    bcs .notatseven
 
     jsr hardScrollScreenRight
 
 .notatseven
     inc  SCROLL_POS
     ldx  SCROLL_POS
-    cpx #$07
-    bne .setScrollRegister
+    cpx #$08
+    bcs .setScrollRegister
 
 .resetPosition
     ; Switch to scroll pos 0
