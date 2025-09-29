@@ -172,18 +172,17 @@ softScrollLeft
     lda SCROLL_POS
     bne .notatzero
 
+    lda  #$07
+    sta  SCROLL_POS
+
     jsr hardScrollScreenLeft
+    jmp .setScrollRegister
 
 .notatzero
     ; scroll left one pixel until SCROLL_POS = $FF
     dec  SCROLL_POS
     ldx  SCROLL_POS
     bpl  .setScrollRegister
-
-.resetPosition
-    ; Switch to scroll pos 7
-    lda  #$07
-    sta  SCROLL_POS
 
 .setScrollRegister
     ; load the current value, clear bits #0-#2, add scroll position and write back
@@ -217,20 +216,16 @@ softScrollRight
 
     lda SCROLL_POS
     cmp #$07
-    bcs .notatseven
+    bcc .notatseven
+
+    lda  #$00
+    sta  SCROLL_POS
 
     jsr hardScrollScreenRight
+    jmp .setScrollRegister
 
 .notatseven
     inc  SCROLL_POS
-    ldx  SCROLL_POS
-    cpx #$08
-    bcs .setScrollRegister
-
-.resetPosition
-    ; Switch to scroll pos 0
-    lda  #$00
-    sta  SCROLL_POS
 
 .setScrollRegister
     ; load the current value, clear bits #0-#2, add scroll position and write back
