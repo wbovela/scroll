@@ -82,33 +82,36 @@ SCROLL_DELAY_COUNT    = $00
 ;------------------------------------------------------------
 !zone GameLoop
 GameLoop  
-    jsr waitFrame
+	jsr waitFrame
     
-    ; print scroll position
-    lda SCROLL_POS
-    clc
-    adc #48
-    sta $040a
-    
-    ; right pressed
-    lda #$08
-    bit JOYSTICK_PORT_II
-    bne .noRight
+	; right pressed
+	lda #$08
+	bit JOYSTICK_PORT_II
+	bne .noRight
 
-    jsr  softScrollLeft
-
+	jsr  softScrollLeft
+	
+	lda COLOR_SCROLL_PENDING
+	beq .noRight
+	
+	jsr doColorScrollLeft
+	
 .noRight
-
 	; left pressed
-    lda #$04
-    bit JOYSTICK_PORT_II
-    bne .noLeft
+	lda #$04
+	bit JOYSTICK_PORT_II
+	bne .noLeft
 
-    jsr softScrollRight
-
+	jsr softScrollRight
+	
+	lda COLOR_SCROLL_PENDING
+	beq .noLeft
+	
+	jsr doColorScrollRight
+	
 .noLeft
 
-    jmp  GameLoop         
+	jmp  GameLoop         
   
 ;------------------------------------------------------------ 
 ;
@@ -121,32 +124,32 @@ initDisplay
 	; clear screen
 	jsr $e544
 
-   ; set character colour 
-    ldy  #$00
-    lda  #$01
+	; set character colour 
+	ldy  #$00
+	lda  #$01
 .loopCharColour
-    sta  SCREEN_COLOR+200,y
-    sta  SCREEN_COLOR+360,y
-    sta  SCREEN_COLOR+520,y
-    sta  SCREEN_COLOR+680,y
-    iny
-    ;tya       ; increase colour
-    cpy #160
-    bne  .loopCharColour
+	sta  SCREEN_COLOR+160,y
+	sta  SCREEN_COLOR+330,y
+	sta  SCREEN_COLOR+500,y
+	sta  SCREEN_COLOR+670,y
+	iny
+	tya       ; increase colour
+	cpy #170
+	bne  .loopCharColour
 
-    ; set characters to A
-    ldy  #$00
-    lda  #$01
+	; set characters to A
+	ldy  #$00
+	lda  #$01
 .loopChar
-    sta SCREEN_CHAR+200,y
-    sta SCREEN_CHAR+360,y
-    sta SCREEN_CHAR+520,y
-    sta SCREEN_CHAR+680,y
-    iny
-    tya       ; increase character
-    cpy #160
-    bne  .loopChar
-    rts
+	sta SCREEN_CHAR+160,y ; line 4 to 20 including
+	sta SCREEN_CHAR+330,y
+	sta SCREEN_CHAR+500,y
+	sta SCREEN_CHAR+670,y
+	iny
+	tya       ; increase character
+	cpy #170
+	bne  .loopChar
+	rts
 
 ;------------------------------------------------------------
 ;
@@ -239,34 +242,57 @@ softScrollRight
 ;------------------------------------------------------------
 ;
 ;    hardScrollScreenLeft
-;    PARAM2 = start row
-;    PARAM3 = end row
+;
 ;------------------------------------------------------------          
 !zone hardScrollScreenLeft
 hardScrollScreenLeft
-    +first_to_backup_column 5, 21
-    +scroll_char_ram_left 5, 21
-    +backup_to_last_column 5, 21
+	+first_to_backup_column 4, 20
+	+scroll_char_ram_left 4, 20
+	+backup_to_last_column 4, 20
 
-    ;+scroll_color_ram 5,21
+	lda #$01
+	sta COLOR_SCROLL_PENDING
+	
+	rts
 
-    rts
+!zone doColorScrollLeft
+doColorScrollLeft
+
+	+first_to_backup_column_color 4, 20
+	+scroll_color_ram_left 4, 20
+	+backup_to_last_column_color 4, 20
+	
+	lda #$0
+	sta COLOR_SCROLL_PENDING
+
+	rts
 
 ;------------------------------------------------------------
 ;
 ;    hardScrollScreenRight
-;    PARAM2 = start row
-;    PARAM3 = end row
+;
 ;------------------------------------------------------------          
 !zone hardScrollScreenRight
 hardScrollScreenRight
-    +last_to_backup_column 5, 21
-    +scroll_char_ram_right 5, 21
-    +backup_to_first_column 5, 21
-
-    ;+scroll_color_ram 5,21
-
+	+last_to_backup_column 4, 20
+	+scroll_char_ram_right 4, 20
+	+backup_to_first_column 4, 20
+	
+	lda #$01
+	sta COLOR_SCROLL_PENDING
+	
     rts
+
+!zone doColorScrollRight
+doColorScrollRight
+	+last_to_backup_column_color 4, 20
+	+scroll_color_ram_right 4, 20
+	+backup_to_first_column_color 4, 20
+	
+	lda #$0
+	sta COLOR_SCROLL_PENDING
+
+	rts
 
 ;---------------------------------------
 ;
@@ -300,12 +326,15 @@ waitFrame
 ;---------------------------------------
 
 ; are for keeping one column of screen information
-BACKUP_COLUMN  !fill     25     
+BACKUP_COLUMN		!fill     25 
+BACKUP_COLUMN_COLOR	!fill     25    
 
 ; the delay counter for scrolling
 SCROLL_DELAY  !byte 0
 
 ; the current horizontal sroll position
 SCROLL_POS     !byte     0
+
+COLOR_SCROLL_PENDING	!byte	0
 
      
