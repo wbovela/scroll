@@ -83,14 +83,14 @@ SCROLL_DELAY_COUNT    = $00
 !zone GameLoop
 GameLoop  
 	jsr waitFrame
-    
+
 	; right pressed
 	lda #$08
 	bit JOYSTICK_PORT_II
 	bne .noRight
 
 	jsr  softScrollLeft
-	
+
 	lda COLOR_SCROLL_PENDING
 	beq .noRight
 	
@@ -128,26 +128,28 @@ initDisplay
 	ldy  #$00
 	lda  #$01
 .loopCharColour
-	sta  SCREEN_COLOR+160,y
-	sta  SCREEN_COLOR+330,y
-	sta  SCREEN_COLOR+500,y
-	sta  SCREEN_COLOR+670,y
+	sta  SCREEN_COLOR+160,y   ; lines 4 to 24
+	sta  SCREEN_COLOR+370,y
+	sta  SCREEN_COLOR+580,y
+	sta  SCREEN_COLOR+790,y
+
 	iny
 	tya       ; increase colour
-	cpy #170
+    cpy #210
 	bne  .loopCharColour
 
 	; set characters to A
 	ldy  #$00
 	lda  #$01
 .loopChar
-	sta SCREEN_CHAR+160,y ; line 4 to 20 including
-	sta SCREEN_CHAR+330,y
-	sta SCREEN_CHAR+500,y
-	sta SCREEN_CHAR+670,y
-	iny
+	sta SCREEN_CHAR+160,y ; line 4 to 24 including
+	sta SCREEN_CHAR+370,y
+	sta SCREEN_CHAR+580,y
+	sta SCREEN_CHAR+790,y
+	
+    iny
 	tya       ; increase character
-	cpy #170
+    cpy #210
 	bne  .loopChar
 	rts
 
@@ -246,9 +248,9 @@ softScrollRight
 ;------------------------------------------------------------          
 !zone hardScrollScreenLeft
 hardScrollScreenLeft
-	+first_to_backup_column 4, 20
-	+scroll_char_ram_left 4, 20
-	+backup_to_last_column 4, 20
+	+first_to_backup_column 4, 24
+	+scroll_char_ram_left 4, 24
+	+backup_to_last_column 4, 24
 
 	lda #$01
 	sta COLOR_SCROLL_PENDING
@@ -258,9 +260,9 @@ hardScrollScreenLeft
 !zone doColorScrollLeft
 doColorScrollLeft
 
-	+first_to_backup_column_color 4, 20
-	+scroll_color_ram_left 4, 20
-	+backup_to_last_column_color 4, 20
+	+first_to_backup_column_color 4, 24
+	+scroll_color_ram_left 4, 24
+	+backup_to_last_column_color 4, 24
 	
 	lda #$0
 	sta COLOR_SCROLL_PENDING
@@ -274,9 +276,9 @@ doColorScrollLeft
 ;------------------------------------------------------------          
 !zone hardScrollScreenRight
 hardScrollScreenRight
-	+last_to_backup_column 4, 20
-	+scroll_char_ram_right 4, 20
-	+backup_to_first_column 4, 20
+	+last_to_backup_column 4, 24
+	+scroll_char_ram_right 4, 24
+	+backup_to_first_column 4, 24
 	
 	lda #$01
 	sta COLOR_SCROLL_PENDING
@@ -285,9 +287,9 @@ hardScrollScreenRight
 
 !zone doColorScrollRight
 doColorScrollRight
-	+last_to_backup_column_color 4, 20
-	+scroll_color_ram_right 4, 20
-	+backup_to_first_column_color 4, 20
+	+last_to_backup_column_color 4, 24
+	+scroll_color_ram_right 4, 24
+	+backup_to_first_column_color 4, 24
 	
 	lda #$0
 	sta COLOR_SCROLL_PENDING
