@@ -1,5 +1,5 @@
 ;compile to this filename
-!to "jmain.prg",cbm
+!to "scroll.prg",cbm
 
 ;macros
 !source "macros.asm"
