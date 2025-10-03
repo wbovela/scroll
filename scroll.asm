@@ -334,8 +334,9 @@ initRasterIrq
 
     sei 
 
-    lda #$f7
+    lda #$7f
     sta $dc0d       ; disable all CIA interrupts
+    sta $dd0d
 
     lda #$01
     sta $d01a        ; enable raster IRQ
@@ -363,14 +364,8 @@ initRasterIrq
 !zone irqHandlerTop
 irqHandlerTop
 
-    pha 
-    txa
-    pha 
-    tya
-    pha 
-
-    lda #$6
-    sta $d020
+    ; lda #$6
+    ; sta $d020
 
     lda $d019
     sta $d019       ; acknowledge the IRQ
@@ -380,7 +375,7 @@ irqHandlerTop
     lda #>irqHandlerBottom
     sta $0315
 
-    lda #88
+    lda #80
     sta $d012      ; set raster line to 80
 
     ; force fine scroll = 0 for top rows
@@ -388,25 +383,13 @@ irqHandlerTop
     and #$F8        ; clear scroll bits
     sta VIC_SCREENCTRL2
 
-    pla
-    tay 
-    pla 
-    tax 
-    pla
-
     jmp $ea31       ; jump to the kernal IRQ handler
 
 !zone irqHandlerBottom
 irqHandlerBottom
 
-    pha 
-    txa
-    pha 
-    tya
-    pha 
-
-    lda #$2
-    sta $d020
+    ; lda #$2
+    ; sta $d020
  
     lda $d019
     sta $d019       ; acknowledge the IRQ
@@ -424,12 +407,6 @@ irqHandlerBottom
     and #$F8 
     ora SCROLL_POS
     sta VIC_SCREENCTRL2   
-
-    pla
-    tay 
-    pla 
-    tax 
-    pla 
 
     jmp $ea31
 
