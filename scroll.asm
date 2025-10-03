@@ -49,6 +49,7 @@ SCROLL_DELAY_COUNT    = $00
     !byte $0C,$08,$0A,$00,$9E,$20,$32,$30,$36,$34,$00,$00,$00,$00,$00
 
     jsr initDisplay
+    jsr initRasterIrq
 
     ;background black
     lda #0
@@ -82,6 +83,13 @@ SCROLL_DELAY_COUNT    = $00
 ;------------------------------------------------------------
 !zone GameLoop
 GameLoop  
+
+    lda SCROLL_POS
+    clc
+    adc #48
+    sta $0400 + (2 * 40) + 15
+
+    ; wait for next frame  
 	jsr waitFrame
 
 	; right pressed
@@ -134,7 +142,7 @@ initDisplay
 	sta  SCREEN_COLOR+790,y
 
 	iny
-	tya       ; increase colour
+	;tya       ; increase colour
     cpy #210
 	bne  .loopCharColour
 
@@ -264,7 +272,7 @@ doColorScrollLeft
 	+scroll_color_ram_left 4, 24
 	+backup_to_last_column_color 4, 24
 	
-	lda #$0
+	lda #$00
 	sta COLOR_SCROLL_PENDING
 
 	rts
@@ -291,7 +299,7 @@ doColorScrollRight
 	+scroll_color_ram_right 4, 24
 	+backup_to_first_column_color 4, 24
 	
-	lda #$0
+	lda #$00
 	sta COLOR_SCROLL_PENDING
 
 	rts
@@ -320,6 +328,110 @@ waitFrame
       
     rts
 
+
+!zone initRasterIrq
+initRasterIrq
+
+    sei 
+
+    lda #$f7
+    sta $dc0d       ; disable all CIA interrupts
+
+    lda #$01
+    sta $d01a        ; enable raster IRQ
+
+    lda #48
+    sta $d012       ; set raster line to 16
+
+    lda #$1b
+    sta $d011       ; clear MSB of raster line 
+
+    lda #<irqHandlerTop
+    sta $0314
+    lda #>irqHandlerTop
+    sta $0315
+
+    lda $dc0d       ; acknowledge any pending CIA interrupts
+    lda $dd0d
+
+    lda #$07
+    sta SCROLL_POS
+
+    cli
+    rts
+
+!zone irqHandlerTop
+irqHandlerTop
+
+    pha 
+    txa
+    pha 
+    tya
+    pha 
+
+    lda #$6
+    sta $d020
+
+    lda $d019
+    sta $d019       ; acknowledge the IRQ
+
+    lda #<irqHandlerBottom
+    sta $0314
+    lda #>irqHandlerBottom
+    sta $0315
+
+    lda #88
+    sta $d012      ; set raster line to 80
+
+    ; force fine scroll = 0 for top rows
+    lda VIC_SCREENCTRL2
+    and #$F8        ; clear scroll bits
+    sta VIC_SCREENCTRL2
+
+    pla
+    tay 
+    pla 
+    tax 
+    pla
+
+    jmp $ea31       ; jump to the kernal IRQ handler
+
+!zone irqHandlerBottom
+irqHandlerBottom
+
+    pha 
+    txa
+    pha 
+    tya
+    pha 
+
+    lda #$2
+    sta $d020
+ 
+    lda $d019
+    sta $d019       ; acknowledge the IRQ
+    
+    lda #<irqHandlerTop
+    sta $0314
+    lda #>irqHandlerTop
+    sta $0315
+
+    lda #48
+    sta $d012      ; set raster line to 16
+    
+    ; set scroll position to SCROLL_POS
+    lda VIC_SCREENCTRL2
+    and #$F8 
+    ora SCROLL_POS
+    sta VIC_SCREENCTRL2   
+
+    pla
+    tay 
+    pla 
+    tax 
+    pla 
+
+    jmp $ea31
 
 ;---------------------------------------
 ;
