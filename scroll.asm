@@ -19,7 +19,19 @@ ZEROPAGE_POINTER_2      = $19
 ZEROPAGE_POINTER_3      = $21
 ZEROPAGE_POINTER_4      = $23
 
+VIC_SPRITE_X_POS        = $d000
+VIC_SPRITE_Y_POS        = $d001
+VIC_SPRITE_X_EXTEND     = $d010
+VIC_SPRITE_ENABLE       = $d015
 VIC_SCREENCTRL2         = $d016
+VIC_SPRITE_DBL_HEIGHT   = $d017
+VIC_MEMORY_CONTROL      = $d018
+VIC_SPRITE_PRIORITY     = $d01b
+VIC_SPRITE_MULTICOLOR   = $d01c
+VIC_SPRITE_DBL_WIDTH    = $d01d
+VIC_SPRITE_MULTICOLOR_1 = $d025
+VIC_SPRITE_MULTICOLOR_2 = $d026
+VIC_SPRITE_COLOR        = $d027
 VIC_BORDER_COLOR        = $d020
 VIC_BACKGROUND_COLOR    = $d021
 
@@ -42,6 +54,15 @@ SCREEN_COLOR            = $D800
 ;set number of loops to delay scrolling
 SCROLL_DELAY_COUNT    = $00
 
+;address of sprite pointers
+SPRITE_POINTER_BASE     = SCREEN_CHAR + 1016
+
+;sprite number constant
+SPRITE_BASE                 = 128
+
+SPRITE_LEFT                 = SPRITE_BASE + 0
+SPRITE_RIGHT                = SPRITE_BASE + 1
+
 ;this creates a basic start
 *=$0801
 
@@ -49,6 +70,7 @@ SCROLL_DELAY_COUNT    = $00
     !byte $0C,$08,$0A,$00,$9E,$20,$32,$30,$36,$34,$00,$00,$00,$00,$00
 
     jsr initDisplay
+    jsr initSprites
     jsr initRasterIrq
 
     ;background black
@@ -92,16 +114,19 @@ GameLoop
     ; wait for next frame  
 	jsr waitFrame
 
+
 	; right pressed
 	lda #$08
 	bit JOYSTICK_PORT_II
 	bne .noRight
 
+    lda #SPRITE_RIGHT
+    sta SPRITE_POINTER_BASE
 	jsr  softScrollLeft
 
 	lda COLOR_SCROLL_PENDING
 	beq .noRight
-	
+    
 	jsr doColorScrollLeft
 	
 .noRight
@@ -110,6 +135,8 @@ GameLoop
 	bit JOYSTICK_PORT_II
 	bne .noLeft
 
+    lda #SPRITE_LEFT
+    sta SPRITE_POINTER_BASE
 	jsr softScrollRight
 	
 	lda COLOR_SCROLL_PENDING
@@ -142,13 +169,13 @@ initDisplay
 	sta  SCREEN_COLOR+790,y
 
 	iny
-	;tya       ; increase colour
+	tya       ; increase colour
     cpy #210
 	bne  .loopCharColour
 
 	; set characters to A
 	ldy  #$00
-	lda  #$01
+	lda  #$00
 .loopChar
 	sta SCREEN_CHAR+160,y ; line 4 to 24 including
 	sta SCREEN_CHAR+370,y
@@ -249,6 +276,37 @@ softScrollRight
     sta VIC_SCREENCTRL2
     rts
 
+;---------------------------------------
+;
+;    waitFrame
+;
+;---------------------------------------
+!zone waitFrame
+    ;wait for the raster to reach line $f8
+    ;this is keeping our timing stable
+      
+    ;are we on line $F8 already? if so, wait for the next full screen
+    ;prevents mistimings if called too fast
+waitFrame 
+    lda $d012
+    cmp #$F8
+    beq waitFrame
+
+    ;wait for the raster to reach line $f8 (should be closer to the start of this line this way)
+.WaitStep2
+    lda $d012
+    cmp #$F8
+    bne .WaitStep2
+      
+    rts
+
+    !src "sprites.asm"
+
+    !src "irq.asm"
+
+* = $2000
+    !bin "scroll.spr"
+
 ;------------------------------------------------------------
 ;
 ;    hardScrollScreenLeft
@@ -306,32 +364,6 @@ doColorScrollRight
 
 ;---------------------------------------
 ;
-;    waitFrame
-;
-;---------------------------------------
-!zone waitFrame
-    ;wait for the raster to reach line $f8
-    ;this is keeping our timing stable
-      
-    ;are we on line $F8 already? if so, wait for the next full screen
-    ;prevents mistimings if called too fast
-waitFrame 
-    lda $d012
-    cmp #$F8
-    beq waitFrame
-
-    ;wait for the raster to reach line $f8 (should be closer to the start of this line this way)
-.WaitStep2
-    lda $d012
-    cmp #$F8
-    bne .WaitStep2
-      
-    rts
-
-!src "irq.asm"
-
-;---------------------------------------
-;
 ; Game data goes here
 ;
 ;---------------------------------------
@@ -347,5 +379,3 @@ SCROLL_DELAY  !byte 0
 SCROLL_POS     !byte     0
 
 COLOR_SCROLL_PENDING	!byte	0
-
-     
