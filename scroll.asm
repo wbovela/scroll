@@ -114,7 +114,6 @@ GameLoop
     ; wait for next frame  
 	jsr waitFrame
 
-
 	; right pressed
 	lda #$08
 	bit JOYSTICK_PORT_II
@@ -122,7 +121,7 @@ GameLoop
 
     lda #SPRITE_RIGHT
     sta SPRITE_POINTER_BASE
-	jsr  softScrollLeft
+	jsr softScrollLeft
 
 	lda COLOR_SCROLL_PENDING
 	beq .noRight
@@ -169,7 +168,7 @@ initDisplay
 	sta  SCREEN_COLOR+790,y
 
 	iny
-	tya       ; increase colour
+	;tya       ; increase colour
     cpy #210
 	bne  .loopCharColour
 
@@ -315,10 +314,13 @@ waitFrame
 !zone hardScrollScreenLeft
 hardScrollScreenLeft
 	+first_to_backup_column 4, 24
-	+scroll_char_ram_left 4, 24
+
+	+scroll_char_ram_left 4, 14
+    +scroll_char_ram_left 15, 24
+    
 	+backup_to_last_column 4, 24
 
-	lda #$01
+	lda #$00
 	sta COLOR_SCROLL_PENDING
 	
 	rts
@@ -327,7 +329,8 @@ hardScrollScreenLeft
 doColorScrollLeft
 
 	+first_to_backup_column_color 4, 24
-	+scroll_color_ram_left 4, 24
+	+scroll_color_ram_left 4, 14
+    +scroll_color_ram_left 15, 24
 	+backup_to_last_column_color 4, 24
 	
 	lda #$00
@@ -343,10 +346,11 @@ doColorScrollLeft
 !zone hardScrollScreenRight
 hardScrollScreenRight
 	+last_to_backup_column 4, 24
-	+scroll_char_ram_right 4, 24
+	+scroll_char_ram_right 4, 14
+    +scroll_char_ram_right 15, 24
 	+backup_to_first_column 4, 24
 	
-	lda #$01
+	lda #$00
 	sta COLOR_SCROLL_PENDING
 	
     rts
@@ -354,7 +358,8 @@ hardScrollScreenRight
 !zone doColorScrollRight
 doColorScrollRight
 	+last_to_backup_column_color 4, 24
-	+scroll_color_ram_right 4, 24
+	+scroll_color_ram_right 4, 14
+    +scroll_color_ram_right 15, 24
 	+backup_to_first_column_color 4, 24
 	
 	lda #$00

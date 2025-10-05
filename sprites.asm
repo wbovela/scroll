@@ -18,7 +18,7 @@ initSprites
         lda #150
         sta VIC_SPRITE_Y_POS      ; sprite 0 Y
 
-        lda #1
+        lda #2
         sta VIC_SPRITE_COLOR      ; sprite 0 color = white
 
 ; -------------------------------------------------------
