@@ -105,6 +105,8 @@ SPRITE_RIGHT                = SPRITE_BASE + 1
 ;------------------------------------------------------------
 !zone GameLoop
 GameLoop  
+    lda #0
+    sta VIC_BORDER_COLOR
 
     lda SCROLL_POS
     clc
@@ -113,6 +115,8 @@ GameLoop
 
     ; wait for next frame  
 	jsr waitFrame
+    lda #$1
+    sta VIC_BORDER_COLOR
 
 	; right pressed
 	lda #$08
@@ -122,11 +126,14 @@ GameLoop
     lda #SPRITE_RIGHT
     sta SPRITE_POINTER_BASE
 	jsr softScrollLeft
+    inc VIC_BORDER_COLOR
 
 	lda COLOR_SCROLL_PENDING
 	beq .noRight
     
 	jsr doColorScrollLeft
+    lda #0
+    sta VIC_BORDER_COLOR
 	
 .noRight
 	; left pressed
@@ -137,12 +144,15 @@ GameLoop
     lda #SPRITE_LEFT
     sta SPRITE_POINTER_BASE
 	jsr softScrollRight
-	
+	inc VIC_BORDER_COLOR
+
 	lda COLOR_SCROLL_PENDING
 	beq .noLeft
 	
 	jsr doColorScrollRight
-	
+	lda #0
+    sta VIC_BORDER_COLOR
+
 .noLeft
 
 	jmp  GameLoop         
@@ -320,7 +330,7 @@ hardScrollScreenLeft
     
 	+backup_to_last_column 4, 24
 
-	lda #$00
+	lda #$01
 	sta COLOR_SCROLL_PENDING
 	
 	rts
@@ -350,7 +360,7 @@ hardScrollScreenRight
     +scroll_char_ram_right 15, 24
 	+backup_to_first_column 4, 24
 	
-	lda #$00
+	lda #$01
 	sta COLOR_SCROLL_PENDING
 	
     rts
