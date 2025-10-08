@@ -60,8 +60,8 @@ VIC_SCREEN1 = %11000000 ; $3000
 SCROLL_DELAY_COUNT    = $00
 
 ;address of sprite pointers
-SPRITE_POINTER_BASE		= SCREEN_CHAR + 1016
-SPRITE_POINTER_BASE1	= SCREEN_CHAR1 + 1016
+SPRITE_POINTER_BASE   = SCREEN_CHAR + 1016
+SPRITE_POINTER_BASE1  = SCREEN_CHAR1 + 1016
 
 ;sprite number constant
 SPRITE_BASE                 = 128
@@ -72,37 +72,37 @@ SPRITE_RIGHT                = SPRITE_BASE + 1
 ;this creates a basic start
 *=$0801
 
-    ;SYS 2064
-    !byte $0C,$08,$0A,$00,$9E,$20,$32,$30,$36,$34,$00,$00,$00,$00,$00
+	;SYS 2064
+	!byte $0C,$08,$0A,$00,$9E,$20,$32,$30,$36,$34,$00,$00,$00,$00,$00
 
-    jsr initDisplay
-    jsr initSprites
-    jsr initRasterIrq
+	jsr initDisplay
+	jsr initSprites
+	jsr initRasterIrq
 
-    ;background black
-    lda #0
-    sta VIC_BACKGROUND_COLOR
-    sta VIC_BORDER_COLOR
+	;background black
+	lda #0
+	sta VIC_BACKGROUND_COLOR
+	sta VIC_BORDER_COLOR
 
-    ; set 38 column mode
-    lda VIC_SCREENCTRL2
-    and #%11110111  ; 0-2 = fine scroll, 3 = 38/40 columns mode, 4 = multicolor mode, 5-7 unused
-    sta VIC_SCREENCTRL2
+	; set 38 column mode
+	lda VIC_SCREENCTRL2
+	and #%11110111  ; 0-2 = fine scroll, 3 = 38/40 columns mode, 4 = multicolor mode, 5-7 unused
+	sta VIC_SCREENCTRL2
 
-    ; set scroll delay to 0
-    ldx  #$00
-    stx  SCROLL_DELAY
+	; set scroll delay to 0
+	ldx  #$00
+	stx  SCROLL_DELAY
 
-    ; start at 7 for left scrolling
-    lda  #$07
-    sta  SCROLL_POS
+	; start at 7 
+	lda  #$07
+	sta  SCROLL_POS
 
-    ; set scroll position to SCROLL_POS
-    lda VIC_SCREENCTRL2
-    and #$F8
-    clc 
-    adc SCROLL_POS
-    sta VIC_SCREENCTRL2   
+	; set scroll position to SCROLL_POS
+	lda VIC_SCREENCTRL2
+	and #$F8
+	clc 
+	adc SCROLL_POS
+	sta VIC_SCREENCTRL2   
 
 ;------------------------------------------------------------
 ;
@@ -114,6 +114,7 @@ GameLoop
 	lda #0
 	sta VIC_BORDER_COLOR
 
+	; display scroll position
 	lda SCROLL_POS
 	clc
 	adc #48
@@ -216,7 +217,7 @@ initDisplay
 	txa
 	sta SCREEN_CHAR1+160,y
 	sta SCREEN_CHAR1+370,y
-    	sta SCREEN_CHAR1+580,y
+	sta SCREEN_CHAR1+580,y
 	sta SCREEN_CHAR1+790,y
 	pla
 
@@ -338,12 +339,12 @@ waitFrame
       
 	rts
 
-	!src "sprites.asm"
-	!src "irq.asm"
-	!src "util.asm"
+!src "sprites.asm"
+!src "irq.asm"
+!src "util.asm"
 
 * = $2000
-	!bin "scroll.spr"
+!bin "scroll.spr"
 
 ;------------------------------------------------------------
 ;
@@ -364,7 +365,6 @@ hardScrollScreenLeft
 
 !zone doColorScrollLeft
 doColorScrollLeft
-
 	+first_to_backup_column_color 4, 24
 	+scroll_color_ram_left 4, 14
 	+scroll_color_ram_left 15, 24
@@ -411,13 +411,13 @@ doColorScrollRight
 ;---------------------------------------
 
 ; are for keeping one column of screen information
-BACKUP_COLUMN		!fill     25 
-BACKUP_COLUMN_COLOR	!fill     25    
+BACKUP_COLUMN				!fill     25 
+BACKUP_COLUMN_COLOR			!fill     25    
 
 ; the delay counter for scrolling
-SCROLL_DELAY		!byte 0
+SCROLL_DELAY				!byte 0
 
 ; the current horizontal sroll position
-SCROLL_POS		!byte     0
+SCROLL_POS				!byte     0
 
-COLOR_SCROLL_PENDING	!byte 0
+COLOR_SCROLL_PENDING		!byte 0
