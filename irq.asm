@@ -11,7 +11,7 @@ initRasterIrq
 	sta $d01a        ; enable raster IRQ
 
 	lda #48
-	sta $d012       ; set raster line to 16
+	sta $d012       ; set raster line to 48
 
 	lda #$1b
 	sta $d011       ; clear MSB of raster line 

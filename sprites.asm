@@ -27,6 +27,5 @@ initSprites
 
 	lda #SPRITE_LEFT
 	sta SPRITE_POINTER_BASE		; pointer for sprite 0
-	sta SPRITE_POINTER_BASE1		; pointer for sprite 
 	rts
 
