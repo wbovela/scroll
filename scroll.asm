@@ -131,10 +131,10 @@ GameLoop
 	;sta VIC_BORDER_COLOR
 
 	; display scroll position
-	lda SCROLL_POS
-	clc
-	adc #48
-	sta SCREEN_CHAR+(2 * 40) + 15
+	;lda SCROLL_POS
+	;clc
+	;adc #48
+	;sta SCREEN_CHAR+(2 * 40) + 15
 
 	; wait for next frame  
 	jsr waitFrame
@@ -249,44 +249,56 @@ initDisplay
 
 	; set character colour 
 	ldy  #$00
-	lda  #$00
-.loopCharColour
-	sta  SCREEN_COLOR+160,y   ; lines 4 to 24
-	sta  SCREEN_COLOR+370,y
-	sta  SCREEN_COLOR+580,y
-	sta  SCREEN_COLOR+790,y
-
+		
+.loopCharColour	
+	lda #$00				; lines 0 to 4 are black, no multicolor
+	sta SCREEN_COLOR,y
+	lda  #$08				; bit 3 makes multicolour
+	sta SCREEN_COLOR+160,y   ; lines 4 to 21
+	sta SCREEN_COLOR+370,y
+	sta SCREEN_COLOR+580,y
+	sta SCREEN_COLOR+790,y
+	sta SCREEN_COLOR+880,y
 	iny
-	;tya       ; increase colour
 	cpy #210
 	bne  .loopCharColour
 
-	; set characters to A
-;	ldy  #$00
-;	ldx  #$40
-;	lda  #$00
-;.loopChar
-;	sta SCREEN_CHAR+160,y ; line 4 to 24 including
-;	sta SCREEN_CHAR+370,y
-;	sta SCREEN_CHAR+580,y
-;	sta SCREEN_CHAR+790,y
-;	iny
-;	tya       ; increase character
-;	cpy #210
-;	bne  .loopChar
+	ldy #$00				; char 1 on top 4 lines and bottom
+	lda #$01
+.loopTopLines
+	sta SCREEN_CHAR,y
+	iny
+	cpy #200
+	bne .loopTopLines
+	
+	ldy #$00				; char 1 on bottom 2 lines
+	lda #$01
+.loopBottomLines
+	sta SCREEN_CHAR+880,y
+	iny
+	cpy #120
+	bne .loopBottomLines
+	
+	
+	; copy 40 columns and 17 lines from map coordinate x = 0
+	; to the screen
 
 	ldy #$00
+	sty XPOS_16B
+	sty XPOS_16B + 1
+	sty PARAM1
+	jsr getPointerToMapCharacter
+	
 .loopChar
 
 !for .LINE, 0, 16 {
-	lda MAP_DATA + 512*.LINE, y
+	lda MAP_DATA + 0 + 512*.LINE, y
 	sta SCREEN_CHAR + (40 * (.LINE + 5)), y
 }
 	
 	iny
 	cpy #40
 	bne .loopChar
-
 	rts
 
 ;------------------------------------------------------------
@@ -506,3 +518,6 @@ MAPTABLEHIGH
 
 SPRITE_DATA
 !bin "scroll.spr"
+
+
+	

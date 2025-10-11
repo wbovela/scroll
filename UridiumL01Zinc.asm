@@ -129,6 +129,7 @@ charset_attrib_L1_data
 ; Map Data...
 ; 512x17 (8704) cells, 8 bits per cell, total size is 8704 ($2200) bytes.
 
+* = $1800
 MAP_DATA
 
 !byte $01,$01,$01,$01,$01,$0c,$0d,$07,$07,$07,$07,$07,$07,$07,$07,$07

@@ -105,18 +105,18 @@ CopySprites
 !zone getPointerToMapCharacter
 getPointerToMapCharacter
 	
-	ldy PARAM1
-	lda MAPTABLELOW, y
+	lda XPOS_16B
+	clc
+	adc #<MAP_DATA
 	sta ZEROPAGE_POINTER_1
-	lda MAPTABLEHIGH, y
+	
+	lda XPOS_16B + 1
+	adc #>MAP_DATA
 	sta ZEROPAGE_POINTER_1 + 1
 	
 	clc
-	lda ZEROPAGE_POINTER_1
-	adc XPOS_16B
-	sta ZEROPAGE_POINTER_1
 	lda ZEROPAGE_POINTER_1 + 1
-	adc XPOS_16B + 1
+	adc PARAM1
 	sta ZEROPAGE_POINTER_1 + 1
 	rts
 	
