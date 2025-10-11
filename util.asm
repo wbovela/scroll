@@ -91,4 +91,33 @@ CopySprites
 
           rts
 	
+;------------------------------------------------------------
+;
+;	get pointer to char x,y map coordinates
+;	in:
+;	XPOS_16B	= x
+;	PARAM1	= y
+;	out:
+;	ZEROPAGE_POINTER_1
+;		
+;------------------------------------------------------------	
+
+!zone getPointerToMapCharacter
+getPointerToMapCharacter
+	
+	ldy PARAM1
+	lda MAPTABLELOW, y
+	sta ZEROPAGE_POINTER_1
+	lda MAPTABLEHIGH, y
+	sta ZEROPAGE_POINTER_1 + 1
+	
+	clc
+	lda ZEROPAGE_POINTER_1
+	adc XPOS_16B
+	sta ZEROPAGE_POINTER_1
+	lda ZEROPAGE_POINTER_1 + 1
+	adc XPOS_16B + 1
+	sta ZEROPAGE_POINTER_1 + 1
+	rts
+	
 	

@@ -20,8 +20,8 @@ colr_cmlo_map = 8
 ; Quantities and dimensions...
 
 char_count = 148
-map_wid = 512
-map_hei = 17
+MAP_WIDTH = 512
+MAP_HEIGHT = 17
 
 ; Data block sizes...
 
@@ -129,7 +129,7 @@ charset_attrib_L1_data
 ; Map Data...
 ; 512x17 (8704) cells, 8 bits per cell, total size is 8704 ($2200) bytes.
 
-map_data
+MAP_DATA
 
 !byte $01,$01,$01,$01,$01,$0c,$0d,$07,$07,$07,$07,$07,$07,$07,$07,$07
 !byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07

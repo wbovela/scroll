@@ -1,4 +1,4 @@
-compile to this filename
+;compile to this filename
 !to "scroll.prg",cbm
 
 ;macros
@@ -6,12 +6,16 @@ compile to this filename
 
 ;define constants here
 
-;placeholder for various temp parameters
+;placeholder for various 8 bit temp parameters
 PARAM1                  = $03
 PARAM2                  = $04
 PARAM3                  = $05
 PARAM4                  = $06
 PARAM5                  = $07
+
+;various 16 bit temp parameters two bytes each
+PARAM1_16B			= $FB	
+XPOS_16B				= $FD	
 
 ;placeholder for zero page pointers
 ZEROPAGE_POINTER_1      = $17
@@ -85,8 +89,9 @@ SPRITE_RIGHT                = SPRITE_BASE + 1
 	jsr initRasterIrq
 
 	;background black
-	lda #0
+	lda #1
 	sta VIC_BACKGROUND_COLOR
+	lda #0
 	sta VIC_BORDER_COLOR
 
 	;set charset multi colors
@@ -96,8 +101,8 @@ SPRITE_RIGHT                = SPRITE_BASE + 1
 	sta VIC_CHARSET_MULTICOLOR_2
 
 	; set 38 column mode
-	lda VIC_SCREENCTRL2
-	and #%11110111  ; 0-2 = fine scroll, 3 = 38/40 columns mode, 4 = multicolor mode, 5-7 unused
+	;lda VIC_SCREENCTRL2
+	lda #%11110111  ; 0-2 = fine scroll, 3 = 38/40 columns mode, 4 = multicolor mode, 5-7 unused
 	sta VIC_SCREENCTRL2
 
 	; set scroll delay to 0
@@ -105,7 +110,7 @@ SPRITE_RIGHT                = SPRITE_BASE + 1
 	stx  SCROLL_DELAY
 
 	; start at 7 
-	lda  #$07
+	lda  #$00
 	sta  SCROLL_POS
 
 	; set scroll position to SCROLL_POS
@@ -242,33 +247,46 @@ initDisplay
 	; clear screen
 	jsr clearScreen
 
-;	; set character colour 
-;	ldy  #$00
-;	lda  #$08
-;.loopCharColour
-;	sta  SCREEN_COLOR+160,y   ; lines 4 to 24
-;	sta  SCREEN_COLOR+370,y
-;	sta  SCREEN_COLOR+580,y
-;	sta  SCREEN_COLOR+790,y
+	; set character colour 
+	ldy  #$00
+	lda  #$00
+.loopCharColour
+	sta  SCREEN_COLOR+160,y   ; lines 4 to 24
+	sta  SCREEN_COLOR+370,y
+	sta  SCREEN_COLOR+580,y
+	sta  SCREEN_COLOR+790,y
 
-;	iny
-;	;tya       ; increase colour
-;	cpy #210
-;	bne  .loopCharColour
+	iny
+	;tya       ; increase colour
+	cpy #210
+	bne  .loopCharColour
 
 	; set characters to A
-	ldy  #$00
-	ldx  #$40
-	lda  #$00
+;	ldy  #$00
+;	ldx  #$40
+;	lda  #$00
+;.loopChar
+;	sta SCREEN_CHAR+160,y ; line 4 to 24 including
+;	sta SCREEN_CHAR+370,y
+;	sta SCREEN_CHAR+580,y
+;	sta SCREEN_CHAR+790,y
+;	iny
+;	tya       ; increase character
+;	cpy #210
+;	bne  .loopChar
+
+	ldy #$00
 .loopChar
-	sta SCREEN_CHAR+160,y ; line 4 to 24 including
-	sta SCREEN_CHAR+370,y
-	sta SCREEN_CHAR+580,y
-	sta SCREEN_CHAR+790,y
+
+!for .LINE, 0, 16 {
+	lda MAP_DATA + 512*.LINE, y
+	sta SCREEN_CHAR + (40 * (.LINE + 5)), y
+}
+	
 	iny
-	tya       ; increase character
-	cpy #210
-	bne  .loopChar
+	cpy #40
+	bne .loopChar
+
 	rts
 
 ;------------------------------------------------------------
@@ -460,6 +478,17 @@ SCROLL_DELAY				!byte 0
 SCROLL_POS				!byte     0
 
 COLOR_SCROLL_PENDING		!byte 0
+
+MAPTABLELOW
+!for i,0,16 {
+	!byte <(MAP_DATA + i * MAP_WIDTH)
+}
+
+MAPTABLEHIGH
+!for i,0,16 {
+	!byte >(MAP_DATA + i * MAP_WIDTH)
+}
+
 
 ;---------------------------------------
 ;
