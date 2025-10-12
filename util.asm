@@ -116,7 +116,7 @@ getPointerToMapCharacter
 	
 	clc
 	lda ZEROPAGE_POINTER_1 + 1
-	adc PARAM1
+	adc PARAM1 				; this should be PARAM1 * $2, only works if PARAM1=0
 	sta ZEROPAGE_POINTER_1 + 1
 	rts
 	

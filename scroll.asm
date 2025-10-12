@@ -11,10 +11,10 @@ PARAM1                  = $03
 PARAM2                  = $04
 PARAM3                  = $05
 PARAM4                  = $06
-PARAM5                  = $07
+VIEWPORTY               = $07
 
 ;various 16 bit temp parameters two bytes each
-PARAM1_16B			= $FB	
+VIEWPORTX_16B			= $FB	
 XPOS_16B				= $FD	
 
 ;placeholder for zero page pointers
@@ -105,13 +105,11 @@ SPRITE_RIGHT                = SPRITE_BASE + 1
 	lda #%11110111  ; 0-2 = fine scroll, 3 = 38/40 columns mode, 4 = multicolor mode, 5-7 unused
 	sta VIC_SCREENCTRL2
 
-	; set scroll delay to 0
-	ldx  #$00
-	stx  SCROLL_DELAY
-
-	; start at 7 
-	lda  #$00
-	sta  SCROLL_POS
+	lda #$00
+	sta SCROLL_DELAY
+	sta SCROLL_POS
+	sta VIEWPORTX_16B
+	sta VIEWPORTX_16B + 1
 
 	; set scroll position to SCROLL_POS
 	lda VIC_SCREENCTRL2
@@ -129,12 +127,6 @@ SPRITE_RIGHT                = SPRITE_BASE + 1
 GameLoop  
 	;lda #0
 	;sta VIC_BORDER_COLOR
-
-	; display scroll position
-	;lda SCROLL_POS
-	;clc
-	;adc #48
-	;sta SCREEN_CHAR+(2 * 40) + 15
 
 	; wait for next frame  
 	jsr waitFrame
@@ -328,6 +320,14 @@ softScrollLeft
 	lda  #$07
 	sta  SCROLL_POS
 
+	clc					; increase viewport x
+	lda VIEWPORTX_16B
+	adc #$01
+	sta VIEWPORTX_16B
+	lda VIEWPORTX_16B + 1
+	adc #$00
+	sta VIEWPORTX_16B + 1
+
 	jsr hardScrollScreenLeft
 	jmp .setScrollRegister
 
@@ -371,6 +371,14 @@ softScrollRight
 
 	lda  #$00
 	sta  SCROLL_POS
+
+	sec					; decrease viewport x
+	lda VIEWPORTX_16B
+	sbc #$01
+	sta VIEWPORTX_16B
+	lda VIEWPORTX_16B + 1
+	sbc #$00
+	sta VIEWPORTX_16B + 1
 
 	jsr hardScrollScreenRight
 	jmp .setScrollRegister
@@ -422,12 +430,46 @@ waitFrame
 ;------------------------------------------------------------          
 !zone hardScrollScreenLeft
 hardScrollScreenLeft
-	+first_to_backup_column 4, 24
-	+scroll_char_ram_left 4, 14
-	+scroll_char_ram_left 15, 24
-	+backup_to_last_column 4, 24
 
-	lda #$01
+	+scroll_char_ram_left 4, 14		; scroll the char ram
+	+scroll_char_ram_left 15, 24
+	
+	lda VIEWPORTX_16B				; get the correct address for the viewport
+	clc
+	adc #<(MAP_DATA+40)				; get the address of the next column
+	sta .fetchData + 1
+	lda VIEWPORTX_16B + 1			; handle the high part of the 16 bit add
+	adc #>MAP_DATA
+	sta .fetchData + 2
+
+	lda #<(SCREEN_CHAR + (5 * 40) + 39)	; get the address of the char ram, last col
+	sta .screenData + 1					; both low and hi parts
+	lda #>(SCREEN_CHAR + (5 * 40) + 39)
+	sta .screenData + 2
+
+	ldy #$00			; row 0		; handle 17 (0..16) rows
+	
+.fetchData
+	lda $ffff						; self-modifying addresses
+.screenData
+	sta $ffff						; to get from map to char ram
+	iny
+	
+	inc .fetchData + 2				; add $2 to the high part
+	inc .fetchData + 2				; so we get to +$200 (512) for the next line
+		
+	lda .screenData + 1				; increase char ram pointer by 40 each line
+	clc
+	adc #40
+	sta .screenData + 1
+	lda .screenData + 2				; also handle the hi part
+	adc #0
+	sta .screenData + 2
+	
+	cpy #17
+	bne .fetchData
+
+	lda #$00
 	sta COLOR_SCROLL_PENDING
   
 	rts
@@ -456,7 +498,7 @@ hardScrollScreenRight
 	+scroll_char_ram_right 15, 24
 	+backup_to_first_column 4, 24
   
-	lda #$01
+	lda #$00
 	sta COLOR_SCROLL_PENDING
   
 	rts
