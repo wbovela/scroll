@@ -128,6 +128,11 @@ GameLoop
 	;lda #0
 	;sta VIC_BORDER_COLOR
 
+	lda #$48					; show something at the top
+	sta $0400+95
+	lda #$01					; colour it white
+	sta $d800+95
+
 	; wait for next frame  
 	jsr waitFrame
 	;lda #$1
@@ -141,6 +146,7 @@ GameLoop
 	lda #SPRITE_RIGHT
 	sta SPRITE_POINTER_BASE
 	jsr softScrollLeft
+	jsr softScrollLeft
 	;inc VIC_BORDER_COLOR
 
 	lda COLOR_SCROLL_PENDING
@@ -151,13 +157,15 @@ GameLoop
 	;sta VIC_BORDER_COLOR
   
 .noRight
-	; left pressed
+	; left pressed?
 	lda #$04
 	bit JOYSTICK_PORT_II
 	bne .noLeft
 
 	lda #SPRITE_LEFT
 	sta SPRITE_POINTER_BASE
+	
+	jsr softScrollRight
 	jsr softScrollRight
 	;inc VIC_BORDER_COLOR
 
@@ -165,8 +173,8 @@ GameLoop
 	beq .noLeft
   
 	jsr doColorScrollRight
-	;lda #0
-	;sta VIC_BORDER_COLOR
+	lda #0
+	sta VIC_BORDER_COLOR
 	
 .noLeft
 
@@ -242,10 +250,20 @@ initDisplay
 	; set character colour 
 	ldy  #$00
 		
-.loopCharColour	
+	ldy #$00
 	lda #$00				; lines 0 to 4 are black, no multicolor
+.loopTopRows	
 	sta SCREEN_COLOR,y
-	lda  #$08				; bit 3 makes multicolour
+	lda #$01				; char 1 on rows 0..4
+	sta SCREEN_CHAR,y
+	lda #$00
+	iny
+	cpy #200
+	bne .loopTopRows
+	
+	ldy #$00
+	lda #$08				; bit 3 makes multicolour
+.loopMiddleRows	
 	sta SCREEN_COLOR+160,y   ; lines 4 to 21
 	sta SCREEN_COLOR+370,y
 	sta SCREEN_COLOR+580,y
@@ -253,15 +271,7 @@ initDisplay
 	sta SCREEN_COLOR+880,y
 	iny
 	cpy #210
-	bne  .loopCharColour
-
-	ldy #$00				; char 1 on top 4 lines and bottom
-	lda #$01
-.loopTopLines
-	sta SCREEN_CHAR,y
-	iny
-	cpy #200
-	bne .loopTopLines
+	bne .loopMiddleRows
 	
 	ldy #$00				; char 1 on bottom 2 lines
 	lda #$01
@@ -300,24 +310,20 @@ initDisplay
 ;------------------------------------------------------------          
 !zone softScrollLeft
 softScrollLeft
-	;check whether to execute the scroll
-	ldx  SCROLL_DELAY
-	cpx  #SCROLL_DELAY_COUNT
-	beq  .doScroll
-      
-	inc  SCROLL_DELAY
-	rts
-
-.doScroll
-    
-	; reset the scroll delay to zero
-	ldx #$00
-	stx SCROLL_DELAY
 
 	lda SCROLL_POS
 	bne .notatzero
 
-	lda  #$07
+	lda VIEWPORTX_16B+1		; check for right limit
+	cmp #1
+	bne .rightLimitNotHit
+	lda VIEWPORTX_16B		; high is 1 and low >= 255-40
+	cmp #216
+	bcc .rightLimitNotHit
+	rts
+	
+.rightLimitNotHit
+	lda  #$07				; scrolled one whole character
 	sta  SCROLL_POS
 
 	clc					; increase viewport x
@@ -332,9 +338,8 @@ softScrollLeft
 	jmp .setScrollRegister
 
 .notatzero
-	; scroll left one pixel until SCROLL_POS = $FF
 	dec  SCROLL_POS
-
+	
 .setScrollRegister
 	; load the current value, clear bits #0-#2, add scroll position and write back
 	lda VIC_SCREENCTRL2
@@ -351,24 +356,18 @@ softScrollLeft
 ;------------------------------------------------------------          
 !zone softScrollRight
 softScrollRight
-	;check whether to execute the scroll
-	ldx  SCROLL_DELAY
-	cpx  #SCROLL_DELAY_COUNT
-	beq  .doScroll
-      
-	inc  SCROLL_DELAY
-	rts
-
-.doScroll
-    
-	; reset the scroll delay to zero
-	ldx #$00
-	stx SCROLL_DELAY
-
+	
 	lda SCROLL_POS
 	cmp #$07
 	bcc .notatseven
 
+	lda VIEWPORTX_16B+1
+	bne .leftLimitNotHit
+	lda VIEWPORTX_16B
+	bne .leftLimitNotHit
+	rts
+	
+.leftLimitNotHit
 	lda  #$00
 	sta  SCROLL_POS
 
@@ -493,12 +492,48 @@ doColorScrollLeft
 ;------------------------------------------------------------          
 !zone hardScrollScreenRight
 hardScrollScreenRight
-	+last_to_backup_column 4, 24
+
 	+scroll_char_ram_right 4, 14
 	+scroll_char_ram_right 15, 24
-	+backup_to_first_column 4, 24
-  
-	lda #$00
+	
+	lda VIEWPORTX_16B				; get the correct address for the viewport
+	sec
+	sbc #1
+	clc
+	adc #<(MAP_DATA)				; get the address of the previous column
+	sta .fetchData + 1
+	lda VIEWPORTX_16B + 1			; handle the high part of the 16 bit add
+	adc #>MAP_DATA
+	sta .fetchData + 2
+
+	lda #<(SCREEN_CHAR + (5 * 40))	; get the address of the char ram, last col
+	sta .screenData + 1					; both low and hi parts
+	lda #>(SCREEN_CHAR + (5 * 40))
+	sta .screenData + 2
+
+	ldy #$00			; row 0		; handle 17 (0..16) rows
+	
+.fetchData
+	lda $ffff						; self-modifying addresses
+.screenData
+	sta $ffff						; to get from map to char ram
+	iny
+	
+	inc .fetchData + 2				; add $2 to the high part
+	inc .fetchData + 2				; so we get to +$200 (512) for the next line
+		
+	lda .screenData + 1				; increase char ram pointer by 40 each line
+	clc
+	adc #40
+	sta .screenData + 1
+	lda .screenData + 2				; also handle the hi part
+	adc #0
+	sta .screenData + 2
+	
+	cpy #17
+	bne .fetchData	
+	
+  	lda #$00
 	sta COLOR_SCROLL_PENDING
   
 	rts
