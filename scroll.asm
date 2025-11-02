@@ -7,11 +7,11 @@
 ;define constants here
 
 ;placeholder for various 8 bit temp parameters
-PARAM1                  = $03
-PARAM2                  = $04
-PARAM3                  = $05
-PARAM4                  = $06
-VIEWPORTY               = $07
+PARAM1				= $03
+PARAM2				= $04
+PARAM3				= $05
+PARAM4				= $06
+PARAM5				= $07
 
 ;various 16 bit temp parameters two bytes each
 VIEWPORTX_16B			= $FB	
@@ -88,7 +88,7 @@ SPRITE_RIGHT                = SPRITE_BASE + 1
 	jsr initSprites
 	jsr initRasterIrq
 
-	;background black
+	;background white
 	lda #1
 	sta VIC_BACKGROUND_COLOR
 	lda #0
@@ -125,36 +125,40 @@ SPRITE_RIGHT                = SPRITE_BASE + 1
 ;------------------------------------------------------------
 !zone GameLoop
 GameLoop  
-	;lda #0
-	;sta VIC_BORDER_COLOR
-
-	lda #$48					; show something at the top
+	lda VIEWPORTX_16B+1			; show viewport x at the top
+	clc
+	adc #48
 	sta $0400+95
-	lda #$01					; colour it white
+	lda VIEWPORTX_16B
+	clc
+	adc #48
+	sta $0400+96
+	lda #$07					; colour it 
 	sta $d800+95
+	sta $d800+96
+	
+	lda SCROLL_POS				; show scroll pos
+	clc
+	adc #48
+	sta $0400+95+40
+	lda #$07
+	sta $d800+95+40
 
-	; wait for next frame  
-	jsr waitFrame
-	;lda #$1
-	;sta VIC_BORDER_COLOR
-
-	; right pressed
+	; right pressed?
 	lda #$08
 	bit JOYSTICK_PORT_II
 	bne .noRight
 
 	lda #SPRITE_RIGHT
 	sta SPRITE_POINTER_BASE
+	jsr waitFrame
 	jsr softScrollLeft
 	jsr softScrollLeft
-	;inc VIC_BORDER_COLOR
 
 	lda COLOR_SCROLL_PENDING
 	beq .noRight
     
 	jsr doColorScrollLeft
-	;lda #0
-	;sta VIC_BORDER_COLOR
   
 .noRight
 	; left pressed?
@@ -165,9 +169,9 @@ GameLoop
 	lda #SPRITE_LEFT
 	sta SPRITE_POINTER_BASE
 	
+	jsr waitFrame	
 	jsr softScrollRight
 	jsr softScrollRight
-	;inc VIC_BORDER_COLOR
 
 	lda COLOR_SCROLL_PENDING
 	beq .noLeft
@@ -244,9 +248,6 @@ setupMemory
 !zone initDisplay
 initDisplay
 
-	; clear screen
-	jsr clearScreen
-
 	; set character colour 
 	ldy  #$00
 		
@@ -254,8 +255,8 @@ initDisplay
 	lda #$00				; lines 0 to 4 are black, no multicolor
 .loopTopRows	
 	sta SCREEN_COLOR,y
-	lda #$01				; char 1 on rows 0..4
-	sta SCREEN_CHAR,y
+	lda #32				; char 1 on rows 0..4
+	sta $0400,y
 	lda #$00
 	iny
 	cpy #200
@@ -311,18 +312,17 @@ initDisplay
 !zone softScrollLeft
 softScrollLeft
 
+	lda VIEWPORTX_16B+1			; check viewport's hi part 
+	beq .nothitrightlimit		; if it's zero, we're not there
+	lda VIEWPORTX_16B			; then check the low part
+	cmp #(511-256-40)			; right most is 40 bytes before the end
+	bcc .nothitrightlimit
+	rts
+	
+.nothitrightlimit
 	lda SCROLL_POS
 	bne .notatzero
 
-	lda VIEWPORTX_16B+1		; check for right limit
-	cmp #1
-	bne .rightLimitNotHit
-	lda VIEWPORTX_16B		; high is 1 and low >= 255-40
-	cmp #216
-	bcc .rightLimitNotHit
-	rts
-	
-.rightLimitNotHit
 	lda  #$07				; scrolled one whole character
 	sta  SCROLL_POS
 
@@ -356,18 +356,18 @@ softScrollLeft
 ;------------------------------------------------------------          
 !zone softScrollRight
 softScrollRight
-	
+
+	lda VIEWPORTX_16B+1			; check viewport's hi part
+	bne .nothitleftlimit		; if it's not zero we're not there
+	lda VIEWPORTX_16B			; then check the low end
+	bne .nothitleftlimit		; if it's zero we're there.
+	rts
+
+.nothitleftlimit	
 	lda SCROLL_POS
-	cmp #$07
+	cmp #$07			; scrollpos - 7. 0..7:cc
 	bcc .notatseven
 
-	lda VIEWPORTX_16B+1
-	bne .leftLimitNotHit
-	lda VIEWPORTX_16B
-	bne .leftLimitNotHit
-	rts
-	
-.leftLimitNotHit
 	lda  #$00
 	sta  SCROLL_POS
 
@@ -496,9 +496,7 @@ hardScrollScreenRight
 	+scroll_char_ram_right 4, 14
 	+scroll_char_ram_right 15, 24
 	
-	lda VIEWPORTX_16B				; get the correct address for the viewport
-	sec
-	sbc #1
+	lda VIEWPORTX_16B
 	clc
 	adc #<(MAP_DATA)				; get the address of the previous column
 	sta .fetchData + 1
